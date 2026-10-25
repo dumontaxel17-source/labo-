@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+<title>Labo Ketha RP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* Tableau de bord RP : chiffres clés, puis Stockage / Bénéfice / Production en blocs empilés. */
+/* Ambiance « Los Santos de nuit » : fond nuit, une couleur par partie (stock turquoise, argent ambre, production vert). */
+:root {
+  --bg: #EEF1F7;
+  --surface: #FFFFFF;
+  --surface-2: #F4F6FB;
+  --ink: #161A2B;
+  --muted: #586079;
+  --line: #E0E5EF;
+  --line-strong: #C9D0DF;
+  --accent: #C25E00;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #FFF0DE;
+  --gain: #13804A;
+  --loss: #C4352A;
+  --warn-soft: #FDE8E5;
+  --c-stock: #0E8A93;
+  --c-stock-soft: #E0F5F6;
+  --c-argent: #C25E00;
+  --c-argent-soft: #FFF0DE;
+  --c-prod: #13804A;
+  --c-prod-soft: #E2F5EA;
+  --shadow: 0 1px 2px rgba(22, 26, 43, 0.06), 0 6px 20px rgba(22, 26, 43, 0.06);
+  --font-title: 'Chakra Petch', 'IBM Plex Sans', system-ui, sans-serif;
+  --font-ui: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-num: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12141F; --surface: #1B1E2D; --surface-2: #222639; --ink: #EEF0F8; --muted: #A2A9C2;
+    --line: #2C3148; --line-strong: #3A405C; --accent: #FFB347; --accent-ink: #14161F; --accent-soft: #3A2A14;
+    --gain: #5EE29A; --loss: #FF8A7E; --warn-soft: #3D1F1D;
+    --c-stock: #4FD8E0; --c-stock-soft: #133238; --c-argent: #FFB347; --c-argent-soft: #3A2A14;
+    --c-prod: #5EE29A; --c-prod-soft: #153325; --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12141F; --surface: #1B1E2D; --surface-2: #222639; --ink: #EEF0F8; --muted: #A2A9C2;
+  --line: #2C3148; --line-strong: #3A405C; --accent: #FFB347; --accent-ink: #14161F; --accent-soft: #3A2A14;
+  --gain: #5EE29A; --loss: #FF8A7E; --warn-soft: #3D1F1D;
+  --c-stock: #4FD8E0; --c-stock-soft: #133238; --c-argent: #FFB347; --c-argent-soft: #3A2A14;
+  --c-prod: #5EE29A; --c-prod-soft: #153325; --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.25);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 56px;
+}
+.page { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+h1, h2 { font-family: var(--font-title); margin: 0; letter-spacing: 0.3px; text-wrap: balance; }
+h1 { font-size: 30px; font-weight: 700; text-transform: uppercase; }
+h2 { font-size: 20px; font-weight: 700; text-transform: uppercase; }
+.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px 20px; }
+.top p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.status { font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--gain); }
+.status[data-state="saving"]::before, .status[data-state="local"]::before { background: #C98A1B; }
+.status[data-state="error"]::before { background: var(--loss); }
+
+/* Chiffres clés */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kpi span { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
+.kpi strong { font-family: var(--font-num); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi--main { background: var(--accent-soft); border-color: var(--accent); }
+.pos { color: var(--gain); } .neg { color: var(--loss); }
+
+/* Blocs */
+.bloc { background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.bloc__tete { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; }
+.bloc__tete p { margin: 0; color: var(--muted); font-size: 14px; }
+
+/* Stockage */
+.stock { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.item { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--surface-2); }
+.item label { font-weight: 600; font-size: 14px; }
+.item .ctrl { display: flex; align-items: stretch; gap: 6px; }
+.item input { flex: 1; min-width: 0; font-family: var(--font-num); font-size: 22px; font-weight: 600; text-align: center; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); height: 44px; font-variant-numeric: tabular-nums; }
+.item.bas input { border-color: var(--loss); color: var(--loss); background: var(--warn-soft); }
+.pm { width: 40px; flex: none; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 20px; font-weight: 600; cursor: pointer; }
+.pm:hover { border-color: var(--accent); color: var(--accent); }
+.item small { color: var(--muted); font-size: 12px; }
+.item--pochon { border-color: var(--accent); }
+
+/* Formulaires */
+.ligne-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.champ { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); flex: 1 1 120px; min-width: 0; }
+.champ--large { flex: 2 1 200px; }
+.champ input, .champ select { height: 42px; border: 1px solid var(--line-strong); border-radius: 8px; padding: 0 10px; font: inherit; font-size: 15px; color: var(--ink); background: var(--surface); width: 100%; }
+.champ input.num { font-family: var(--font-num); text-align: right; }
+.btn { height: 42px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn--go { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn--go:hover { color: var(--accent-ink); filter: brightness(1.08); }
+.params { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px; border-radius: 10px; background: var(--surface-2); border: 1px dashed var(--line-strong); }
+.params .champ { flex: 0 1 200px; }
+.raccourcis { display: flex; flex-wrap: wrap; gap: 8px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Tableaux */
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 620px; }
+th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); background: var(--surface-2); padding: 9px 12px; font-weight: 600; }
+td { padding: 9px 12px; border-top: 1px solid var(--line); vertical-align: middle; }
+td.n, th.n { text-align: right; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+th.n { font-family: var(--font-ui); }
+tfoot td { font-weight: 600; background: var(--surface-2); }
+.tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.tag--dep { background: var(--warn-soft); color: var(--loss); }
+.tag--vente { background: var(--accent-soft); color: var(--gain); }
+.suppr { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 6px; }
+.suppr:hover { color: var(--loss); }
+.suppr[data-confirm="1"] { background: var(--loss); color: var(--accent-ink); font-weight: 600; }
+.vide { color: var(--muted); font-size: 14px; padding: 14px 12px; text-align: center; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 14px; z-index: 20; }
+/* Habillage plus convivial : cartes arrondies, ombre douce, une couleur par partie */
+.kpi, .bloc { border-radius: 16px; box-shadow: var(--shadow); border-color: var(--line); }
+.kpi { border-top: 4px solid var(--line-strong); }
+.kpi:nth-child(1) { border-top-color: var(--loss); }
+.kpi:nth-child(2) { border-top-color: var(--gain); }
+.kpi--main { border-top-color: var(--c-argent); background: var(--c-argent-soft); border-color: var(--c-argent); }
+.kpi:nth-child(4), .kpi:nth-child(5) { border-top-color: var(--c-stock); }
+.bloc { --sec: var(--accent); --sec-soft: var(--accent-soft); border-top: 5px solid var(--sec); }
+.bloc[aria-labelledby="h-stock"] { --sec: var(--c-stock); --sec-soft: var(--c-stock-soft); }
+.bloc[aria-labelledby="h-ben"], .bloc[aria-labelledby="h-argent"] { --sec: var(--c-argent); --sec-soft: var(--c-argent-soft); }
+.argent { display: flex; flex-wrap: wrap; gap: 14px; }
+.argent__cases { flex: 2 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.acase { background: var(--sec-soft); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.acase span { font-size: 13px; font-weight: 600; color: var(--muted); }
+.acase strong { font-family: var(--font-num); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acase small { font-size: 12px; color: var(--muted); }
+.calcul { flex: 1 1 280px; min-width: 0; border: 2px solid var(--sec); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; background: var(--surface); }
+.calcul__titre { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; font-size: 15px; color: var(--sec); }
+.calcul__ligne { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; }
+.calcul__ligne .n { font-family: var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.calcul__total { border-top: 2px solid var(--line-strong); padding-top: 8px; margin-top: 2px; font-weight: 700; font-size: 18px; }
+.calcul__petit { font-size: 13px; color: var(--muted); }
+.bloc[aria-labelledby="h-prod"] { --sec: var(--c-prod); --sec-soft: var(--c-prod-soft); }
+.bloc h2 { display: inline-flex; align-items: center; gap: 10px; color: var(--sec); }
+.bloc h2::before { content: ""; width: 12px; height: 12px; border-radius: 4px; background: var(--sec); transform: rotate(45deg); }
+.item { border-radius: 14px; background: var(--sec-soft); border-color: transparent; }
+.item input, .pm { border-radius: 10px; }
+.item--pochon { border: 2px solid var(--c-argent); background: var(--c-argent-soft); }
+.pm { background: var(--surface); }
+.pm:hover { border-color: var(--sec); color: var(--sec); }
+.bloc .btn--go { background: var(--sec); border-color: var(--sec); color: var(--accent-ink); }
+.btn, .champ input, .champ select { border-radius: 10px; }
+.params { border-radius: 14px; background: var(--sec-soft); border-color: transparent; }
+.scroll { border-radius: 14px; }
+th { background: var(--sec-soft); }
+tbody tr:hover td { background: var(--surface-2); }
+.tag { padding: 3px 12px; }
+h1 { background: linear-gradient(90deg, var(--c-stock), var(--c-argent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@media (max-width: 560px) { h1 { font-size: 24px; } .bloc { padding: 14px; } .kpi strong { font-size: 19px; } }
+</style>
+
+<div class="page">
+  <header class="top">
+    <div>
+      <h1>Labo Ketha</h1>
+      <p>Gestion RP · stock, argent et production. Tout s’enregistre tout seul.</p>
+    </div>
+    <span class="status" id="status" data-state="saving">Chargement…</span>
+  </header>
+
+  <section class="kpis" aria-label="Chiffres clés">
+    <div class="kpi"><span>Total dépensé</span><strong class="neg" id="k-dep">0 $</strong></div>
+    <div class="kpi"><span>Total ventes</span><strong class="pos" id="k-ven">0 $</strong></div>
+    <div class="kpi kpi--main"><span>Bénéfice</span><strong id="k-ben">0 $</strong></div>
+    <div class="kpi"><span>Pochons en stock</span><strong id="k-poch">0</strong></div>
+    <div class="kpi"><span>Valeur des pochons</span><strong id="k-val">0 $</strong></div>
+  </section>
+
+  <!-- STOCKAGE -->
+  <section class="bloc" aria-labelledby="h-stock">
+    <div class="bloc__tete">
+      <h2 id="h-stock">Stockage</h2>
+      <p>Tapez le nombre à la main, ou utilisez − / +.</p>
+    </div>
+    <div class="stock" id="stock"></div>
+  </section>
+
+  <!-- ARGENT -->
+  <section class="bloc" aria-labelledby="h-argent">
+    <div class="bloc__tete">
+      <h2 id="h-argent">Argent</h2>
+      <p>Calculé tout seul à partir des dépenses et ventes notées plus bas.</p>
+    </div>
+    <div class="argent">
+      <div class="argent__cases">
+        <div class="acase"><span>Achat tables, batteries, machines</span><strong class="neg" id="a-mat">0 $</strong><small>Matériel</small></div>
+        <div class="acase"><span>Rachat des pochons</span><strong class="neg" id="a-rach">0 $</strong><small id="a-rach-n">Aucun rachat</small></div>
+        <div class="acase"><span>Autres dépenses</span><strong class="neg" id="a-autre">0 $</strong><small>Essence, réparations…</small></div>
+        <div class="acase"><span>Gagné avec la vente</span><strong class="pos" id="a-vente">0 $</strong><small id="a-vente-n">Aucune vente</small></div>
+      </div>
+      <div class="calcul" aria-label="Calcul du bénéfice">
+        <span class="calcul__titre">Calcul du bénéfice</span>
+        <div class="calcul__ligne"><span>Ventes</span><span class="n pos" id="c-vente">+ 0 $</span></div>
+        <div class="calcul__ligne"><span>Matériel</span><span class="n neg" id="c-mat">− 0 $</span></div>
+        <div class="calcul__ligne"><span>Rachat des pochons</span><span class="n neg" id="c-rach">− 0 $</span></div>
+        <div class="calcul__ligne"><span>Autres dépenses</span><span class="n neg" id="c-autre">− 0 $</span></div>
+        <div class="calcul__ligne calcul__total"><span>Bénéfice</span><span class="n" id="c-ben">0 $</span></div>
+        <div class="calcul__ligne calcul__petit"><span>Coût d’un pochon (matériel + rachat)</span><span class="n" id="c-cout">—</span></div>
+        <div class="calcul__ligne calcul__petit"><span>Bénéfice par pochon vendu</span><span class="n" id="c-unit">—</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BÉNÉFICE -->
+  <section class="bloc" aria-labelledby="h-ben">
+    <div class="bloc__tete">
+      <h2 id="h-ben">Bénéfice</h2>
+      <p>Notez chaque dépense et chaque vente.</p>
+    </div>
+    <div class="params">
+      <label class="champ" for="p-table">Prix d’une table ($)<input class="num" id="p-table" inputmode="decimal" autocomplete="off"></label>
+      <label class="champ" for="p-batterie">Prix d’une batterie ($)<input class="num" id="p-batterie" inputmode="decimal" autocomplete="off"></label>
+      <label class="champ" for="p-machine">Prix d’une machine ($)<input class="num" id="p-machine" inputmode="decimal" autocomplete="off"></label>
+      <label class="champ" for="p-rachat">Prix de rachat du pochon ($)<input class="num" id="p-rachat" inputmode="decimal" autocomplete="off" placeholder="50"></label>
+      <label class="champ" for="p-pochon">Prix de vente du pochon ($)<input class="num" id="p-pochon" inputmode="decimal" autocomplete="off"></label>
+    </div>
+    <form class="ligne-form" id="f-tx">
+      <label class="champ" for="tx-type">Type
+        <select id="tx-type">
+          <option value="materiel">Achat tables / batteries / machines</option>
+          <option value="rachat">Rachat des pochons</option>
+          <option value="vente">Vente de pochons</option>
+          <option value="autre">Autre dépense</option>
+        </select>
+      </label>
+      <label class="champ champ--large" for="tx-lib">Description<input id="tx-lib" autocomplete="off" placeholder="Ex. 100 tables + 100 batteries"></label>
+      <label class="champ" for="tx-tables" data-mat>Tables<input class="num" id="tx-tables" inputmode="numeric" autocomplete="off" placeholder="0"></label>
+      <label class="champ" for="tx-batteries" data-mat>Batteries<input class="num" id="tx-batteries" inputmode="numeric" autocomplete="off" placeholder="0"></label>
+      <label class="champ" for="tx-machines" data-mat>Machines<input class="num" id="tx-machines" inputmode="numeric" autocomplete="off" placeholder="0"></label>
+      <label class="champ" for="tx-qte" id="tx-qte-wrap" hidden><span id="tx-qte-txt">Pochons vendus</span><input class="num" id="tx-qte" inputmode="numeric" autocomplete="off" placeholder="0"></label>
+      <label class="champ" for="tx-montant">Montant ($)<input class="num" id="tx-montant" inputmode="decimal" autocomplete="off" placeholder="0"></label>
+      <button class="btn btn--go" type="submit">Ajouter</button>
+    </form>
+    <div class="raccourcis">
+      <button class="btn" type="button" id="q-machine">+ Acheter 1 machine</button>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th class="n">Pochons</th><th class="n">Montant</th><th></th></tr></thead>
+        <tbody id="tx-corps"></tbody>
+        <tfoot><tr><td colspan="4">Bénéfice (ventes − dépenses)</td><td class="n" id="tx-total">0 $</td><td></td></tr></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <!-- PRODUCTION -->
+  <section class="bloc" aria-labelledby="h-prod">
+    <div class="bloc__tete">
+      <h2 id="h-prod">Production</h2>
+      <p>Ce qui a été utilisé est retiré du stock, la ketha brute produite y est ajoutée.</p>
+    </div>
+    <form class="ligne-form" id="f-prod"></form>
+    <div class="scroll">
+      <table>
+        <thead id="prod-tete"></thead>
+        <tbody id="prod-corps"></tbody>
+        <tfoot id="prod-pied"></tfoot>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var MATIERES = [
+    { k: 'ammoniaque', n: 'Ammoniaque' },
+    { k: 'kathalar', n: 'Kathalar' },
+    { k: 'machines', n: 'Machines de ketha' },
+    { k: 'batteries', n: 'Batteries' },
+    { k: 'tables', n: 'Tables' }
+  ];
+  var STOCK = MATIERES.concat([{ k: 'ketha', n: 'Ketha brute' }, { k: 'pochons', n: 'Pochons' }]);
+
+  var fmtNum = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
+  function dollars(v) { return fmtNum.format(Math.round((v || 0) * 100) / 100) + ' $'; }
+  function parseN(v) { if (v === null || v === undefined) return null; var s = String(v).replace(/\s/g, '').replace('$', '').replace(',', '.'); if (s === '') return null; var n = Number(s); return isFinite(n) ? n : null; }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s === null || s === undefined ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function quand(ts) { var d = new Date(ts || Date.now()); return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); }
+  function newId() { return 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  /* ---------- État ---------- */
+  var etat = { stock: {}, params: { coutMachine: null, prixPochon: null } };
+  STOCK.forEach(function (s) { etat.stock[s.k] = 0; });
+  var tx = new Map(), prod = new Map();
+  var api = null; var etatTimer = null; var etatPending = false;
+
+  /* ---------- Enregistrement ---------- */
+  var statusEl = $('status');
+  function status(s, t) { statusEl.dataset.state = s; statusEl.textContent = t; }
+  function okStatus() { if (!api) return; status(api.mode === 'db' ? 'ok' : 'local', api.mode === 'db' ? 'Enregistré' : 'Enregistré sur cet appareil'); }
+  function fail(e) { status('error', e && e.code === 'quota_exceeded' ? 'Trop de lignes, supprimez-en' : 'Non enregistré, réessayez'); }
+
+  function makeDbApi(db) {
+    var eDoc = db.doc('etat/principal'), cTx = db.collection('transactions'), cProd = db.collection('production');
+    return {
+      mode: 'db',
+      saveEtat: function () { return eDoc.set(JSON.parse(JSON.stringify(etat))); },
+      put: function (coll, id, data) { return (coll === 'tx' ? cTx : cProd).doc(id).set(data); },
+      del: function (coll, id) { return (coll === 'tx' ? cTx : cProd).doc(id).delete(); },
+      listen: function () {
+        eDoc.onSnapshot(function (s) {
+          if (s.exists && !etatPending) { var d = s.data(); etat = { stock: Object.assign({}, etat.stock, d.stock || {}), params: Object.assign({}, etat.params, d.params || {}) }; renderAll(); }
+          okStatus();
+        }, fail);
+        cTx.orderBy('ts', 'desc').onSnapshot(function (s) { tx = new Map(s.docs.map(function (d) { return [d.id, d.data()]; })); renderTx(); renderKpis(); renderArgent(); renderStockInfo(); }, fail);
+        cProd.orderBy('ts', 'desc').onSnapshot(function (s) { prod = new Map(s.docs.map(function (d) { return [d.id, d.data()]; })); renderProd(); }, fail);
+      }
+    };
+  }
+  function makeLocalApi() {
+    var KEY = 'labo-ketha-v1';
+    function persist() { try { localStorage.setItem(KEY, JSON.stringify({ etat: etat, tx: Array.from(tx), prod: Array.from(prod) })); } catch (e) {} return Promise.resolve(); }
+    return {
+      mode: 'local',
+      saveEtat: persist, put: persist, del: persist,
+      listen: function () {
+        try { var raw = JSON.parse(localStorage.getItem(KEY) || 'null'); if (raw) { etat = raw.etat || etat; tx = new Map(raw.tx || []); prod = new Map(raw.prod || []); } } catch (e) {}
+        renderAll(); okStatus();
+      }
+    };
+  }
+
+  function saveEtat() {
+    etatPending = true; status('saving', 'Enregistrement…');
+    clearTimeout(etatTimer);
+    etatTimer = setTimeout(function () {
+      if (!api) { saveEtat(); return; }
+      api.saveEtat().then(function () { etatPending = false; okStatus(); }, function (e) { etatPending = false; fail(e); });
+    }, 400);
+  }
+  function put(coll, id, data) {
+    var m = coll === 'tx' ? tx : prod; m.set(id, data);
+    if (api) { status('saving', 'Enregistrement…'); api.put(coll, id, data).then(okStatus, fail); }
+    else attente.push(function () { return api.put(coll, id, data); });
+  }
+  function del(coll, id) {
+    (coll === 'tx' ? tx : prod).delete(id);
+    if (api) api.del(coll, id).then(okStatus, fail);
+    else attente.push(function () { return api.del(coll, id); });
+  }
+  var attente = [];
+
+  var toastT;
+  function toast(m) { var t = document.querySelector('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, 2400); }
+
+  /* ---------- Stockage ---------- */
+  var stockEl = $('stock');
+  stockEl.innerHTML = STOCK.map(function (s) {
+    return '<div class="item' + (s.k === 'pochons' ? ' item--pochon' : '') + '" data-k="' + s.k + '">' +
+      '<label for="s-' + s.k + '">' + s.n + '</label>' +
+      '<div class="ctrl"><button class="pm" type="button" data-d="-1" aria-label="Retirer 1 ' + s.n + '">−</button>' +
+      '<input id="s-' + s.k + '" inputmode="numeric" autocomplete="off" value="0">' +
+      '<button class="pm" type="button" data-d="1" aria-label="Ajouter 1 ' + s.n + '">+</button></div>' +
+      '<small data-info></small></div>';
+  }).join('');
+  stockEl.addEventListener('input', function (e) {
+    var it = e.target.closest('.item'); if (!it || e.target.tagName !== 'INPUT') return;
+    var n = parseN(e.target.value); etat.stock[it.dataset.k] = n === null ? 0 : n; saveEtat(); renderStockInfo(); renderKpis();
+  });
+  stockEl.addEventListener('focusout', function (e) { if (e.target.tagName === 'INPUT') renderStock(); });
+  stockEl.addEventListener('click', function (e) {
+    var b = e.target.closest('.pm'); if (!b) return; var k = b.closest('.item').dataset.k;
+    etat.stock[k] = (etat.stock[k] || 0) + Number(b.dataset.d); saveEtat(); renderStock(); renderKpis();
+  });
+  function renderStock() {
+    STOCK.forEach(function (s) {
+      var inp = $('s-' + s.k); if (inp !== document.activeElement) inp.value = fmtNum.format(etat.stock[s.k] || 0).replace(/ | /g, ' ');
+    });
+    renderStockInfo();
+  }
+  function renderStockInfo() {
+    var used = totauxProd();
+    STOCK.forEach(function (s) {
+      var it = stockEl.querySelector('[data-k="' + s.k + '"]'); var v = etat.stock[s.k] || 0;
+      it.classList.toggle('bas', v < 0);
+      var info = it.querySelector('[data-info]');
+      if (v < 0) info.textContent = 'Stock négatif, à corriger';
+      else if (s.k === 'pochons') info.textContent = 'Rachetés au total : ' + fmtNum.format(totauxTx().qRachat || 0);
+      else if (s.k === 'ketha') info.textContent = 'Produite au total : ' + fmtNum.format(used.ketha || 0);
+      else info.textContent = 'Utilisé en production : ' + fmtNum.format(used[s.k] || 0);
+    });
+  }
+
+  /* ---------- Paramètres ---------- */
+  var PARAMS = { 'p-table': 'prixTable', 'p-batterie': 'prixBatterie', 'p-machine': 'coutMachine', 'p-rachat': 'prixRachat', 'p-pochon': 'prixPochon' };
+  var DEFAUTS = { prixTable: 10, prixBatterie: 10, coutMachine: 35, prixRachat: 50 };
+  function prix(k) { var v = etat.params[k]; return v === null || v === undefined ? (DEFAUTS[k] !== undefined ? DEFAUTS[k] : null) : v; }
+  Object.keys(PARAMS).forEach(function (id) {
+    $(id).addEventListener('input', function () {
+      etat.params[PARAMS[id]] = parseN($(id).value); saveEtat(); renderKpis(); renderArgent(); majMontantVente();
+    });
+  });
+  function renderParams() {
+    Object.keys(PARAMS).forEach(function (id) {
+      var v = prix(PARAMS[id]);
+      if (document.activeElement !== $(id)) $(id).value = v === null || v === undefined ? '' : v;
+    });
+  }
+
+  /* ---------- Dépenses / ventes ---------- */
+  var CAT = {
+    materiel: { lab: 'Achat matériel', ph: 'Ex. 100 tables + 100 batteries', q: false, tag: 'tag--dep' },
+    rachat: { lab: 'Rachat pochons', ph: 'Ex. rachat chez le préparateur', q: 'Pochons rachetés', tag: 'tag--dep' },
+    vente: { lab: 'Vente', ph: 'Ex. vente à un client', q: 'Pochons vendus', tag: 'tag--vente' },
+    autre: { lab: 'Autre dépense', ph: 'Ex. essence, réparation', q: false, tag: 'tag--dep' }
+  };
+  function catOf(t) { return t.type === 'vente' ? 'vente' : (t.cat || (t.machine ? 'materiel' : 'autre')); }
+  var montantManuel = false;
+  function majType() {
+    var c = CAT[$('tx-type').value]; $('tx-qte-wrap').hidden = !c.q;
+    document.querySelectorAll('[data-mat]').forEach(function (el) { el.hidden = $('tx-type').value !== 'materiel'; });
+    if (c.q) $('tx-qte-txt').textContent = c.q;
+    $('tx-lib').placeholder = c.ph;
+    montantManuel = false; majMontantVente();
+  }
+  $('tx-type').addEventListener('change', majType);
+  $('tx-montant').addEventListener('input', function () { montantManuel = $('tx-montant').value !== ''; });
+  $('tx-qte').addEventListener('input', majMontantVente);
+  ['tx-tables', 'tx-batteries', 'tx-machines'].forEach(function (id) { $(id).addEventListener('input', majMontantVente); });
+  function qMat() { return { tables: parseN($('tx-tables').value) || 0, batteries: parseN($('tx-batteries').value) || 0, machines: parseN($('tx-machines').value) || 0 }; }
+  function majMontantVente() {
+    var cat = $('tx-type').value;
+    if (montantManuel) return;
+    if (cat === 'materiel') {
+      var m = qMat(), tot = m.tables * (prix('prixTable') || 0) + m.batteries * (prix('prixBatterie') || 0) + m.machines * (prix('coutMachine') || 0);
+      $('tx-montant').value = tot ? String(Math.round(tot * 100) / 100) : '';
+      return;
+    }
+    if (cat !== 'vente' && cat !== 'rachat') return;
+    var q = parseN($('tx-qte').value), p = cat === 'vente' ? prix('prixPochon') : prix('prixRachat');
+    $('tx-montant').value = q && p ? String(Math.round(q * p * 100) / 100) : '';
+  }
+  $('f-tx').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var cat = $('tx-type').value, montant = parseN($('tx-montant').value), qte = CAT[cat].q ? (parseN($('tx-qte').value) || 0) : 0;
+    if (montant === null || montant < 0) { $('tx-montant').focus(); toast('Indiquez un montant'); return; }
+    var mq = cat === 'materiel' ? qMat() : { tables: 0, batteries: 0, machines: 0 };
+    var lib = $('tx-lib').value.trim();
+    if (!lib && cat === 'materiel') {
+      var parts = []; if (mq.tables) parts.push(mq.tables + ' tables'); if (mq.batteries) parts.push(mq.batteries + ' batteries'); if (mq.machines) parts.push(mq.machines + ' machines');
+      lib = parts.length ? 'Achat ' + parts.join(' + ') : '';
+    }
+    lib = lib || CAT[cat].lab;
+    var doc = { type: cat === 'vente' ? 'vente' : 'depense', cat: cat, libelle: lib, montant: montant, qte: qte, ts: Date.now() };
+    if (cat === 'materiel') { doc.mat = mq; ['tables', 'batteries', 'machines'].forEach(function (k) { etat.stock[k] = (etat.stock[k] || 0) + mq[k]; }); saveEtat(); }
+    put('tx', newId(), doc);
+    var msg = cat === 'materiel' && (mq.tables || mq.batteries || mq.machines) ? 'Achat ajouté, matériel ajouté au stock' : CAT[cat].lab + ' ajouté(e)';
+    ['tx-tables', 'tx-batteries', 'tx-machines'].forEach(function (id) { $(id).value = ''; });
+    if (qte && cat === 'vente') { etat.stock.pochons = (etat.stock.pochons || 0) - qte; saveEtat(); msg = 'Vente ajoutée, ' + qte + ' pochon(s) retirés du stock'; }
+    if (qte && cat === 'rachat') { etat.stock.pochons = (etat.stock.pochons || 0) + qte; etat.stock.ketha = (etat.stock.ketha || 0) - qte; saveEtat(); msg = 'Rachat ajouté : +' + qte + ' pochon(s), ketha brute retirée'; }
+    $('tx-lib').value = ''; $('tx-montant').value = ''; $('tx-qte').value = ''; montantManuel = false;
+    renderAll(); toast(msg);
+    $('tx-lib').focus();
+  });
+  $('q-machine').addEventListener('click', function () {
+    var c = prix('coutMachine');
+    if (c === null || c === undefined) { $('p-machine').focus(); toast('Indiquez d’abord le prix d’une machine'); return; }
+    put('tx', newId(), { type: 'depense', cat: 'materiel', libelle: 'Achat machine de ketha', montant: c, qte: 0, ts: Date.now(), machine: 1 });
+    etat.stock.machines = (etat.stock.machines || 0) + 1; saveEtat(); renderAll(); toast('Machine achetée : +1 en stock');
+  });
+  function totauxTx() {
+    var r = { materiel: 0, rachat: 0, autre: 0, v: 0, qVente: 0, qRachat: 0 };
+    tx.forEach(function (t) {
+      var c = catOf(t), m = t.montant || 0;
+      if (c === 'vente') { r.v += m; r.qVente += t.qte || 0; }
+      else { r[c] += m; if (c === 'rachat') r.qRachat += t.qte || 0; }
+    });
+    r.d = r.materiel + r.rachat + r.autre; r.b = r.v - r.d;
+    return r;
+  }
+  function renderArgent() {
+    var T = totauxTx();
+    $('a-mat').textContent = dollars(T.materiel); $('a-rach').textContent = dollars(T.rachat);
+    $('a-autre').textContent = dollars(T.autre); $('a-vente').textContent = dollars(T.v);
+    $('a-rach-n').textContent = T.qRachat ? fmtNum.format(T.qRachat) + ' pochon(s) rachetés' : 'Aucun rachat';
+    $('a-vente-n').textContent = T.qVente ? fmtNum.format(T.qVente) + ' pochon(s) vendus' : 'Aucune vente';
+    $('c-vente').textContent = '+ ' + dollars(T.v); $('c-mat').textContent = '− ' + dollars(T.materiel);
+    $('c-rach').textContent = '− ' + dollars(T.rachat); $('c-autre').textContent = '− ' + dollars(T.autre);
+    var b = $('c-ben'); b.textContent = dollars(T.b); b.className = 'n ' + (T.b < 0 ? 'neg' : T.b > 0 ? 'pos' : '');
+    $('c-cout').textContent = T.qRachat ? dollars((T.materiel + T.rachat) / T.qRachat) : '—';
+    $('c-unit').textContent = T.qVente ? dollars(T.b / T.qVente) : '—';
+  }
+  function renderTx() {
+    var rows = Array.from(tx.entries()).sort(function (a, b) { return (b[1].ts || 0) - (a[1].ts || 0); });
+    $('tx-corps').innerHTML = rows.length ? rows.map(function (p) {
+      var t = p[1], v = t.type === 'vente', c = CAT[catOf(t)];
+      return '<tr><td>' + quand(t.ts) + '</td><td><span class="tag ' + c.tag + '">' + c.lab + '</span></td><td>' + esc(t.libelle) + '</td>' +
+        '<td class="n">' + (t.qte ? fmtNum.format(t.qte) : '') + '</td><td class="n ' + (v ? 'pos' : 'neg') + '">' + (v ? '+' : '−') + dollars(t.montant) + '</td>' +
+        '<td><button class="suppr" type="button" data-c="tx" data-id="' + p[0] + '">Supprimer</button></td></tr>';
+    }).join('') : '<tr><td colspan="6" class="vide">Aucune dépense ni vente pour l’instant. Ajoutez-en une avec le formulaire au-dessus.</td></tr>';
+    var T = totauxTx(); var el = $('tx-total'); el.textContent = dollars(T.b); el.className = 'n ' + (T.b < 0 ? 'neg' : T.b > 0 ? 'pos' : '');
+  }
+
+  /* ---------- Production ---------- */
+  var PROD = MATIERES.concat([{ k: 'ketha', n: 'Ketha brute produite' }]);
+  // Les anciennes productions notaient des « pochons » : on les compte comme ketha brute.
+  function pv(p, k) { return k === 'ketha' ? (p.ketha !== undefined && p.ketha !== null ? p.ketha : (p.pochons || 0)) : (p[k] || 0); }
+  $('f-prod').innerHTML = PROD.map(function (m) {
+    return '<label class="champ" for="pr-' + m.k + '">' + (m.k === 'ketha' ? m.n : m.n + ' utilisé(e)s') + '<input class="num" id="pr-' + m.k + '" inputmode="numeric" autocomplete="off" placeholder="0"></label>';
+  }).join('') + '<button class="btn btn--go" type="submit">Enregistrer la production</button>';
+  $('prod-tete').innerHTML = '<tr><th>Date</th>' + PROD.map(function (m) { return '<th class="n">' + (m.k === 'ketha' ? 'Ketha brute' : m.n) + '</th>'; }).join('') + '<th></th></tr>';
+  $('f-prod').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var d = { ts: Date.now() }, rien = true;
+    PROD.forEach(function (m) { var v = parseN($('pr-' + m.k).value) || 0; d[m.k] = v; if (v) rien = false; });
+    if (rien) { $('pr-ammoniaque').focus(); toast('Indiquez au moins une quantité'); return; }
+    put('prod', newId(), d);
+    MATIERES.forEach(function (m) { etat.stock[m.k] = (etat.stock[m.k] || 0) - d[m.k]; });
+    etat.stock.ketha = (etat.stock.ketha || 0) + d.ketha; saveEtat();
+    PROD.forEach(function (m) { $('pr-' + m.k).value = ''; });
+    renderAll(); toast('Production enregistrée, stock mis à jour');
+  });
+  function totauxProd() { var t = {}; PROD.forEach(function (m) { t[m.k] = 0; }); prod.forEach(function (p) { PROD.forEach(function (m) { t[m.k] += pv(p, m.k); }); }); return t; }
+  function renderProd() {
+    var rows = Array.from(prod.entries()).sort(function (a, b) { return (b[1].ts || 0) - (a[1].ts || 0); });
+    $('prod-corps').innerHTML = rows.length ? rows.map(function (p) {
+      return '<tr><td>' + quand(p[1].ts) + '</td>' + PROD.map(function (m) { return '<td class="n">' + fmtNum.format(pv(p[1], m.k)) + '</td>'; }).join('') +
+        '<td><button class="suppr" type="button" data-c="prod" data-id="' + p[0] + '">Supprimer</button></td></tr>';
+    }).join('') : '<tr><td colspan="' + (PROD.length + 2) + '" class="vide">Aucune production enregistrée. Remplissez les quantités au-dessus.</td></tr>';
+    var t = totauxProd();
+    $('prod-pied').innerHTML = '<tr><td>Total</td>' + PROD.map(function (m) { return '<td class="n">' + fmtNum.format(t[m.k]) + '</td>'; }).join('') + '<td></td></tr>';
+    renderStockInfo();
+  }
+
+  /* ---------- Suppression (remet le stock comme avant) ---------- */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.suppr'); if (!b) return;
+    if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.textContent = 'Confirmer'; setTimeout(function () { if (b.isConnected) { b.dataset.confirm = ''; b.textContent = 'Supprimer'; } }, 3000); return; }
+    var c = b.dataset.c, id = b.dataset.id;
+    if (c === 'prod') {
+      var p = prod.get(id);
+      if (p) {
+        MATIERES.forEach(function (m) { etat.stock[m.k] = (etat.stock[m.k] || 0) + (p[m.k] || 0); });
+        if (p.ketha !== undefined && p.ketha !== null) etat.stock.ketha = (etat.stock.ketha || 0) - p.ketha;
+        else etat.stock.pochons = (etat.stock.pochons || 0) - (p.pochons || 0);
+        saveEtat();
+      }
+    } else {
+      var t = tx.get(id), tc = t ? catOf(t) : '';
+      if (t && t.qte && tc === 'vente') { etat.stock.pochons = (etat.stock.pochons || 0) + t.qte; saveEtat(); }
+      if (t && t.mat) { ['tables', 'batteries', 'machines'].forEach(function (k) { etat.stock[k] = (etat.stock[k] || 0) - (t.mat[k] || 0); }); saveEtat(); }
+      if (t && t.qte && tc === 'rachat') { etat.stock.pochons = (etat.stock.pochons || 0) - t.qte; etat.stock.ketha = (etat.stock.ketha || 0) + t.qte; saveEtat(); }
+      if (t && t.machine) { etat.stock.machines = (etat.stock.machines || 0) - 1; saveEtat(); }
+    }
+    del(c, id); renderAll(); toast('Ligne supprimée, stock remis à jour');
+  });
+
+  /* ---------- Chiffres clés ---------- */
+  function renderKpis() {
+    var T = totauxTx();
+    $('k-dep').textContent = dollars(T.d); $('k-ven').textContent = dollars(T.v);
+    var b = $('k-ben'); b.textContent = dollars(T.b); b.className = T.b < 0 ? 'neg' : T.b > 0 ? 'pos' : '';
+    var po = etat.stock.pochons || 0; $('k-poch').textContent = fmtNum.format(po);
+    $('k-val').textContent = etat.params.prixPochon ? dollars(po * etat.params.prixPochon) : '—';
+  }
+  function renderAll() { renderStock(); renderParams(); renderTx(); renderProd(); renderKpis(); renderArgent(); }
+
+  /* ---------- Démarrage ---------- */
+  renderAll();
+  var c = window.claude;
+  Promise.resolve(c && typeof c.use === 'function' ? c.use('db') : null).catch(function () { return null; }).then(function (db) {
+    api = db ? makeDbApi(db) : makeLocalApi();
+    var avant = { tx: new Map(tx), prod: new Map(prod) };
+    api.listen();
+    // Ce qui a été saisi avant la connexion est gardé et enregistré.
+    avant.tx.forEach(function (v, k) { if (!tx.has(k)) tx.set(k, v); });
+    avant.prod.forEach(function (v, k) { if (!prod.has(k)) prod.set(k, v); });
+    attente.splice(0).forEach(function (f) { f().then(okStatus, fail); });
+    if (api.mode === 'local' && (avant.tx.size || avant.prod.size)) { api.saveEtat(); renderAll(); }
+  });
+})();
+</script>
+
+</body>
+</html>
